@@ -13,10 +13,17 @@ const qMarks = (objects) => {
 }
 
 input.text("Podaj nazwe pliku do którego ma zostać wgrany backup", { default: "backup" }).then(async file => {
-	const ip = await input.text("Podaj ip serwera bazy danych (bez portu!)", { default: "localhost" });
-	const port = await input.text("Podaj port bazy danych", { default: "27017" });
-	const databse = await input.text("Podaj nazwę bazy danych której chcesz zrobić backup");
-	const url = `mongodb://${ip}:${port}/${databse}`;
+	let serverAddress;
+
+	const ip = await input.text("Podaj ip serwera bazy danych", { default: "127.0.0.1" });
+	if (ip.includes(':')) {
+		serverAddress = ip;
+	} else {
+		const port = await input.text("Podaj port bazy danych", { default: "27017" });
+		serverAddress = `${ip}:${port}`;
+	}
+	const database = await input.text("Podaj nazwę bazy danych której chcesz zrobić backup");
+	const url = `mongodb://${serverAddress}/${database}`;
 
 	const connection = await mongoose.connect(url, {
 		useNewUrlParser: true,
@@ -43,14 +50,13 @@ input.text("Podaj nazwe pliku do którego ma zostać wgrany backup", { default: 
 						const sql = `CREATE TABLE IF NOT EXISTS ${c.name} (${keys.join(",")})`;
 						db.prepare(sql).run();
 					}
-		
-					
+
 					const objects = [];
-		
+
 					keys.forEach(k => {
 						objects.push(d[k]);
 					});
-		
+
 					db.prepare(`INSERT INTO ${c.name} (${keys.join(",")}) VALUES(${qMarks(objects).join(",")})`).run(...objects);
 					if (i === data.length - 1) r();
 				});
@@ -58,7 +64,6 @@ input.text("Podaj nazwe pliku do którego ma zostać wgrany backup", { default: 
 			if (ci === collections.length - 1) resolve();
 		});
 	});
-	const close = await input.text("Backup zakończony pomyślnie czy chcesz zamknąć program? (Y/N)", { default: "Y" });
+	const close = await input.text("Backup zakończony pomyślnie. Czy chcesz zamknąć program? (Y/N)", { default: "Y" });
 	if (close.toLowerCase() === "y") process.exit();
 });
-
